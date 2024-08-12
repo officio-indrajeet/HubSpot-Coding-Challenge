@@ -9,14 +9,29 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+/**
+ * A program to calculate the maximum number of concurrent calls for each customer on each day,
+ * based on call data retrieved from an HTTP GET endpoint. The results are sent to an HTTP POST endpoint.
+ */
 public class HubSpotCodingChallenge {
 
+    /**
+     * Represents a phone call record.
+     */
     static class Call {
         int customerId;
         String callId;
         long startTimestamp;
         long endTimestamp;
 
+        /**
+         * Constructs a Call object.
+         *
+         * @param customerId     Unique identifier for the customer.
+         * @param callId         Unique identifier for the call.
+         * @param startTimestamp UNIX timestamp (in milliseconds) when the call started.
+         * @param endTimestamp   UNIX timestamp (in milliseconds) when the call ended.
+         */
         public Call(int customerId, String callId, long startTimestamp, long endTimestamp) {
             this.customerId = customerId;
             this.callId = callId;
@@ -25,6 +40,9 @@ public class HubSpotCodingChallenge {
         }
     }
 
+    /**
+     * Represents the result of maximum concurrent calls for a customer on a specific date.
+     */
     static class Result {
         int customerId;
         String date;
@@ -32,6 +50,15 @@ public class HubSpotCodingChallenge {
         long timestamp;
         List<String> callIds;
 
+        /**
+         * Constructs a Result object.
+         *
+         * @param customerId         Unique identifier for the customer.
+         * @param date               Date for which the result is calculated, in "YYYY-MM-DD" format.
+         * @param maxConcurrentCalls Maximum number of concurrent calls on the given date.
+         * @param timestamp          UNIX timestamp (in milliseconds) during the peak concurrency period.
+         * @param callIds            List of call IDs active during the peak concurrency.
+         */
         public Result(int customerId, String date, int maxConcurrentCalls, long timestamp, List<String> callIds) {
             this.customerId = customerId;
             this.date = date;
@@ -40,6 +67,11 @@ public class HubSpotCodingChallenge {
             this.callIds = callIds;
         }
 
+        /**
+         * Converts the result to a JSON object.
+         *
+         * @return JSONObject representing the result.
+         */
         public JSONObject toJSON() {
             JSONObject json = new JSONObject();
             json.put("customerId", customerId);
@@ -71,6 +103,13 @@ public class HubSpotCodingChallenge {
         }
     }
 
+    /**
+     * Fetches call data from the specified GET endpoint.
+     *
+     * @param endpoint URL of the GET endpoint.
+     * @return List of Call objects retrieved from the endpoint.
+     * @throws Exception if there is an error during the HTTP request or response parsing.
+     */
     private static List<Call> fetchCallData(String endpoint) throws Exception {
         URL url = new URL(endpoint);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -108,6 +147,12 @@ public class HubSpotCodingChallenge {
         return calls;
     }
 
+    /**
+     * Groups calls by customer ID and date.
+     *
+     * @param calls List of Call objects.
+     * @return A map with customer ID as the key, and a map of date to list of calls as the value.
+     */
     private static Map<Integer, Map<String, List<Call>>> groupCallsByCustomerAndDate(List<Call> calls) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         Map<Integer, Map<String, List<Call>>> groupedCalls = new HashMap<>();
@@ -132,7 +177,12 @@ public class HubSpotCodingChallenge {
         return groupedCalls;
     }
 
-    // Increment the date by one day
+    /**
+     * Increments the given date by one day.
+     *
+     * @param date Date in "yyyy-MM-dd" format.
+     * @return The incremented date in "yyyy-MM-dd" format.
+     */
     private static String incrementDate(String date) {
         try {
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -146,6 +196,12 @@ public class HubSpotCodingChallenge {
         }
     }
 
+    /**
+     * Calculates the maximum number of concurrent calls for each customer per date.
+     *
+     * @param groupedCalls A map with customer ID as the key, and a map of date to list of calls as the value.
+     * @return List of Result objects representing maximum concurrent calls per customer per date.
+     */
     private static List<Result> calculateMaxConcurrentCalls(Map<Integer, Map<String, List<Call>>> groupedCalls) {
         List<Result> results = new ArrayList<>();
 
@@ -220,6 +276,12 @@ public class HubSpotCodingChallenge {
         return results;
     }
 
+    /**
+     * Calculates the start of the day in milliseconds for a given date.
+     *
+     * @param date Date in "yyyy-MM-dd" format.
+     * @return UNIX timestamp in milliseconds representing the start of the day.
+     */
     private static long getStartOfDayInMillis(String date) {
         try {
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -230,6 +292,12 @@ public class HubSpotCodingChallenge {
         }
     }
 
+    /**
+     * Calculates the end of the day in milliseconds for a given date.
+     *
+     * @param date Date in "yyyy-MM-dd" format.
+     * @return UNIX timestamp in milliseconds representing the end of the day.
+     */
     private static long getEndOfDayInMillis(String date) {
         try {
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -244,6 +312,13 @@ public class HubSpotCodingChallenge {
         }
     }
 
+    /**
+     * Sends the calculated results to the specified POST endpoint and logs the response.
+     *
+     * @param endpoint URL of the POST endpoint.
+     * @param results  List of Result objects to be sent.
+     * @throws Exception if there is an error during the HTTP request.
+     */
     private static void postResults(String endpoint, List<Result> results) throws Exception {
         URL url = new URL(endpoint);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -267,17 +342,29 @@ public class HubSpotCodingChallenge {
             os.write(input, 0, input.length);
         }
 
-        if (conn.getResponseCode() != 200) {
+        // Log the response from the server
+        int responseCode = conn.getResponseCode();
+        if (responseCode == 200) {
+            System.out.println("POST request successful.");
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) {
+                response.append(line);
+            }
+            System.out.println("Response: " + response.toString()); // Log the success response
+        } else {
+            System.out.println("POST request failed. Response code: " + responseCode);
             BufferedReader br = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
             StringBuilder response = new StringBuilder();
             String line;
             while ((line = br.readLine()) != null) {
                 response.append(line);
             }
-            System.out.println("Error response: " + response.toString());
-            throw new RuntimeException("Failed: HTTP error code : " + conn.getResponseCode());
+            System.out.println("Error response: " + response.toString()); // Log the error response
         }
 
         conn.disconnect();
     }
+
 }

@@ -4,6 +4,10 @@ import org.json.JSONObject;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+/**
+ * This class is used for testing purposes. It calculates the maximum number of concurrent calls
+ * for each customer on each day from a static JSON input.
+ */
 public class HubSpotCodingChallengeTest {
 
     static class Call {
